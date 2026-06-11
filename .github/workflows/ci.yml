@@ -1,0 +1,65 @@
+name: CI Salesforce Validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ develop, main ]
+    paths:
+      - 'force-app/**'
+      - 'sfdx-project.json'
+      - '.github/workflows/**'
+
+jobs:
+  validate:
+    name: Validate Changes
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout do código do repositório
+      - name: 'Checkout source code'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Instalação do Node.js (necessário para o CLI)
+      - name: 'Install Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      # 3. Instalação do Salesforce CLI
+      - name: 'Install Salesforce CLI'
+        run: |
+          npm install -g @salesforce/cli
+          sf version
+
+      # 4. Reconstrução da chave JWT (server.key) a partir da Secret Base64
+      - name: 'Prepare JWT Key'
+        run: |
+          echo "${{ secrets.SF_JWT_KEY_BASE64 }}" | base64 --decode > server.key
+          chmod 600 server.key
+
+      # 5. Autenticação na Org usando JWT
+      - name: 'Authenticate to Salesforce'
+        run: |
+          sf org login jwt \
+            --client-id "${{ secrets.SF_CLIENT_ID }}" \
+            --jwt-key-file server.key \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --instance-url "${{ secrets.SF_INSTANCE_URL }}" \
+            --alias mf-scratch
+
+      # 6. Validação do Login
+      - name: 'Validate Auth Session'
+        run: sf org display --target-org mf-scratch
+
+      # 7. Execução da Validação (Check-only / Dry-run)
+      # Escolhi 'sf project deploy start --dry-run' por ser o comando moderno e completo
+      - name: 'Validate Metadata and Run Tests'
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org mf-scratch \
+            --dry-run \
+            --test-level RunLocalTests \
+            --wait 30
