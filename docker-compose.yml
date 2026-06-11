@@ -1,0 +1,23 @@
+services:
+  app:
+    build: .
+    volumes:
+      - .:/workspace
+      # Persist Salesforce CLI authentication and config
+      - sf_config:/root/.sf
+      - sfdx_config:/root/.sfdx
+      # Persist npm cache for faster installs
+      - npm_cache:/root/.npm
+    ports:
+      - "5173:5173"
+      - "5175:5175"
+    environment:
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+
+volumes:
+  sf_config:
+  sfdx_config:
+  npm_cache:
