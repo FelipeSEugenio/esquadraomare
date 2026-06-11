@@ -38,7 +38,11 @@ export default defineConfig(({ mode }) => {
       assetsDir: 'assets',
       sourcemap: false,
     },
-
+    server: {
+      host: true,
+      port: 5173,
+      strictPort: true,
+    },
     // Resolve aliases (shared between build and test)
     resolve: {
       dedupe: ['react', 'react-dom'],
